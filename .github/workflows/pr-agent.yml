@@ -1,0 +1,82 @@
+name: Full PR Preview AI Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  pr-agent:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # -------------------------
+      # 🤖 AI PR REVIEWER
+      # -------------------------
+      - name: AI PR Review
+        if: github.event.action != 'closed'
+        id: ai
+        run: node .github/scripts/ai-review.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      # -------------------------
+      # 🔐 SECURITY GUARD
+      # -------------------------
+      - name: Security Scan
+        if: github.event.action != 'closed'
+        id: security
+        run: node .github/scripts/security-scan.js
+
+      # Block PR if HIGH risk
+      - name: Fail if unsafe
+        if: steps.security.outputs.block == 'true'
+        run: |
+          echo "❌ Security risk detected. Blocking PR."
+          exit 1
+
+      # -------------------------
+      # 🧪 SETUP ENV
+      # -------------------------
+      - uses: actions/setup-node@v4
+        if: github.event.action != 'closed'
+        with:
+          node-version: 20
+
+      - name: Install
+        if: github.event.action != 'closed'
+        run: npm install
+
+      # -------------------------
+      # 🌐 WORDPRESS PREVIEW
+      # -------------------------
+      - name: WP Preview Deploy
+        if: github.event.action != 'closed'
+        id: deploy
+        run: node .github/scripts/deploy-wp-preview.js
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      # -------------------------
+      # 💬 COMMENT ON PR
+      # -------------------------
+      - name: Comment PR
+        if: github.event.action != 'closed'
+        run: node .github/scripts/comment.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          AI_REPORT: ${{ steps.ai.outputs.report }}
+          SECURITY_REPORT: ${{ steps.security.outputs.report }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+
+      # -------------------------
+      # 🧹 CLEANUP ON CLOSE
+      # -------------------------
+      - name: Cleanup Environment
+        if: github.event.action == 'closed'
+        run: node .github/scripts/cleanup.js
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
