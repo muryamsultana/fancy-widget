@@ -1,7 +1,7 @@
 
 // .github/scripts/ai-review.js
 
-const { OpenAI } = require("../node_modules/openai");
+const { OpenAI } = require("openai");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
