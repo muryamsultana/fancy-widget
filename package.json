@@ -1,5 +1,8 @@
 {
+  "name": "fancy-widget",
+  "version": "1.0.0",
   "dependencies": {
-    "openai": "^6.37.0"
+    "openai": "^6.37.0",
+    "@octokit/rest": "^21.0.0"
   }
 }
