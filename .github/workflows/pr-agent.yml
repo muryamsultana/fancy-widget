@@ -4,12 +4,30 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write   # for comments
+
 jobs:
   pr-agent:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed for git diff
+
+      # -------------------------
+      # Setup Node first
+      # -------------------------
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
 
       # -------------------------
       # 🤖 AI PR REVIEWER
@@ -36,18 +54,6 @@ jobs:
         run: |
           echo "❌ Security risk detected. Blocking PR."
           exit 1
-
-      # -------------------------
-      # 🧪 SETUP ENV
-      # -------------------------
-      - uses: actions/setup-node@v4
-        if: github.event.action != 'closed'
-        with:
-          node-version: 20
-
-      - name: Install
-        if: github.event.action != 'closed'
-        run: npm install
 
       # -------------------------
       # 🌐 WORDPRESS PREVIEW
@@ -77,6 +83,6 @@ jobs:
       # -------------------------
       - name: Cleanup Environment
         if: github.event.action == 'closed'
-        run: node .github/scripts/cleanup.js
+        run: node .github/scripts/clean.js
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
