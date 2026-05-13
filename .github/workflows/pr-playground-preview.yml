@@ -1,0 +1,132 @@
+# Demo workflow showcasing how to automatically add a "Preview in Playground"
+# button to Pull Requests in your repository.
+#
+# See https://github.com/WordPress/wordpress-playground/pull/2870
+
+name: PR Playground Preview
+
+on:
+  pull_request:
+    types:
+      - opened       # When someone creates a new PR
+      - synchronize  # When new commits are pushed to the PR
+      - reopened     # When a closed PR is reopened
+      - edited       # When PR title or description changes
+
+jobs:
+  # This job adds the preview button to your PR
+  playground-preview:
+    name: Post Playground Preview Button
+    needs: create-blueprint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Post Playground Preview Button
+        uses: WordPress/action-wp-playground-pr-preview@v2
+        with:
+          # "append-to-description"  – add the button to the PR description
+          # "post-comment"           – create a new comment with the preview button
+          mode: append-to-description
+          
+          # Use our custom blueprint with the PR branch
+          blueprint: ${{ needs.create-blueprint.outputs.blueprint }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+    
+      # # If you just want to install a plugin from a specific path in this repository
+      # # and you don't really need an entire custom blueprint, you can used simplified
+      # # configuration. Uncomment this line, remove the create-blueprint job below,
+      # # and you're good!
+      # plugin-path: .
+
+      # # Similarly, you can set up a theme fairly easily:
+      # theme-path: .
+
+      # # You can customize what gets appended to the PR description by uncommenting
+      # # and changing the description-template below. Available placeholders are
+      # # listed in the original workflow file at
+      # # https://github.com/WordPress/wordpress-playground/blob/d64ad78befeffc8a48e9f5be031b7be051add6ff/.github/workflows/playground-preview.yml#L313
+      # description-template: |
+      #  ### Test this PR in WordPress Playground
+      #  
+      #  {{PLAYGROUND_BUTTON}}
+
+      # # Similarly, if this workflow is configured to post a comment, you can customize
+      # # the content of that comment. Available placeholders are listed in the original
+      # # workflow file at
+      # # https://github.com/WordPress/wordpress-playground/blob/d64ad78befeffc8a48e9f5be031b7be051add6ff/.github/workflows/playground-preview.yml#L313
+      # comment-template: |
+      #  ## Preview Changes in WordPress Playground
+      #  
+      #  {{PLAYGROUND_BUTTON}}
+      #  
+      #  ### Testing Instructions
+      #  1. Click the button above
+      #  2. Go to Plugins → Installed Plugins
+      #  3. Verify `{{PLUGIN_SLUG}}` is active
+      #  4. Test the new functionality
+
+      # # Are you hosting your own Playground instance? You change the default Playground URL
+      # # below:
+      # playground-host: https://playground.wordpress.net
+    
+  # This job builds a custom blueprint with dynamic values from the PR
+  create-blueprint:
+    name: Create Blueprint
+    runs-on: ubuntu-latest
+    outputs:
+      # Make the blueprint available to the next job
+      blueprint: ${{ steps.blueprint.outputs.result }}
+    steps:
+      - name: Create Blueprint
+        id: blueprint
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Build a blueprint object with the current PR's information
+            const blueprint = {
+              // Send users straight to wp-admin after loading
+              landingPage: "/wp-admin/",
+              steps: [
+                {
+                  // Install your plugin from the PR branch
+                  step: "installPlugin",
+                  pluginData: {
+                    resource: "git:directory",
+                    // Clone the current repository
+                    url: `https://github.com/${context.repo.owner}/${context.repo.repo}.git`,
+                    
+                    // Clone from the current Pull Request's branch
+                    ref: context.payload.pull_request.head.ref,
+                    
+                    // "/" means the plugin is in the repository root
+                    // Change this to "path/to/my/plugin" if your plugin is in a subdirectory
+                    path: "/"
+                  }
+                },
+
+                // Install a non-standard theme for our plugin.
+                // Themes can also be sourced from your repository and arbitrary URLs,
+                // see https://wordpress.github.io/wordpress-playground/blueprints/
+                {
+                  "step": "installTheme",
+                  "themeData": {
+                    "resource": "wordpress.org/themes",
+                    "slug": "adventurer"
+                  }
+                }
+                
+                // You can add more steps here:
+                // - Install additional plugins and themes
+                // - Import starter content
+                // - Download files
+                // - Run wp-cli commands
+                // - ...anything else!
+                // Learn more at https://wordpress.github.io/wordpress-playground/blueprints/
+              ]
+            };
+            // Return the blueprint as a JSON string
+            return JSON.stringify(blueprint);
+          result-encoding: string
