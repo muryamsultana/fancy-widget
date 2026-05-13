@@ -58,12 +58,12 @@ jobs:
       # -------------------------
       # 🌐 WORDPRESS PREVIEW
       # -------------------------
-      - name: WP Preview Deploy
-        if: github.event.action != 'closed'
-        id: deploy
-        run: node .github/scripts/deploy-wp-preview.js
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+     # - name: WP Preview Deploy
+       # if: github.event.action != 'closed'
+       # id: deploy
+        #run: node .github/scripts/deploy-wp-preview.js
+      #  env:
+       #   PR_NUMBER: ${{ github.event.pull_request.number }}
 
       # -------------------------
       # 💬 COMMENT ON PR
