@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: Fancy Dashboard Widget
+Plugin Name: Fancy Test Dashboard Widget
 Description: A stylish WordPress dashboard widget with recent posts, user stats, and quick links.
 Version: 1.0.0
 Author: Muryam
